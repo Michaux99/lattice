@@ -6,8 +6,12 @@ import lombok.Getter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.logging.Log;
+import org.hiforce.lattice.annotation.Schema;
 import org.hiforce.lattice.annotation.model.ExtensionAnnotation;
+import org.hiforce.lattice.jar.LatticeJarUtils;
+import org.hiforce.lattice.jar.model.LatticeJarInfo;
 import org.hiforce.lattice.model.ability.IBusinessExt;
+import org.hiforce.lattice.model.business.IBusiness;
 import org.hiforce.lattice.model.register.RealizationSpec;
 import org.hiforce.lattice.maven.LatticeBuildPlugin;
 import org.hiforce.lattice.maven.model.DependencyInfo;
@@ -18,6 +22,7 @@ import org.hiforce.lattice.runtime.Lattice;
 import java.io.File;
 import java.lang.reflect.Method;
 import java.net.URI;
+import java.nio.file.Files;
 import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.List;
@@ -98,6 +103,42 @@ public abstract class LatticeInfoBuilder {
         return info;
     }
 
+
+    public static LatticeJarInfo getSdkLatticeJarInfo(boolean findSuperClass, Class<?> facadeClass) {
+        Schema schema = facadeClass.getDeclaredAnnotation(Schema.class);
+        if( null != schema){
+            return getPath(facadeClass);
+        }
+        if( !findSuperClass){
+            return getPath(facadeClass);
+        }
+
+        Class<?> superClass = facadeClass.getSuperclass();
+        while (null != superClass) {
+            schema = superClass.getDeclaredAnnotation(Schema.class);
+            if (null != schema && schema.root()) {
+                return getPath(superClass);
+            }
+            if( Object.class.equals(superClass.getSuperclass())){
+                return getPath(superClass);
+            }
+            superClass = superClass.getSuperclass();
+        }
+        return null;
+    }
+
+    public static LatticeJarInfo getPath(Class<?> targetClass) {
+        String path = targetClass.getProtectionDomain().getCodeSource().getLocation().getPath();
+
+        try {
+            File file = new File(path);
+            return LatticeJarUtils.parseLatticeJar(file.getName(), Files.newInputStream(file.toPath()));
+        } catch (Exception e) {
+
+        }
+        return null;
+    }
+
     @SuppressWarnings("unchecked")
     public DependencyInfo getDependencyInfo(Class<?> targetClass) {
         if (null == targetClass) {
@@ -131,12 +172,18 @@ public abstract class LatticeInfoBuilder {
 
     public List<ExtensionInfo> buildCustomizedExtensionInfos(IBusinessExt businessExt) {
         List<ExtensionInfo> extensionInfos = Lists.newArrayList();
-        for (Method method : businessExt.getClass().getDeclaredMethods()) {
+        for (Method method : businessExt.getClass().getMethods()) {
             ExtensionAnnotation annotation = getExtensionAnnotation(method);
-            if (null != annotation) {
-                ExtensionInfo extensionInfo = buildExtensionInfo(businessExt.getClass(), annotation, method);
-                extensionInfos.add(extensionInfo);
+            if (null == annotation) {
+                continue;
             }
+            Class<?> businessExtClass = method.getDeclaringClass();
+            Schema schema = businessExtClass.getDeclaredAnnotation(Schema.class);
+            if( null != schema && schema.root()){
+                continue;
+            }
+            ExtensionInfo extensionInfo = buildExtensionInfo(businessExt.getClass(), annotation, method);
+            extensionInfos.add(extensionInfo);
         }
         for (IBusinessExt subBusinessExt : businessExt.getAllSubBusinessExt()) {
             extensionInfos.addAll(buildCustomizedExtensionInfos(subBusinessExt));
