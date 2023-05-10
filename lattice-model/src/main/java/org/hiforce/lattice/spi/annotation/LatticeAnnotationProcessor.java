@@ -55,6 +55,8 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
      * Maps the class names create service provider interfaces to the
      * class names create the concrete classes which implement them.
      **/
+    // key：SPI接口，比如 IAbility
+    // value：SPI接口的实现，比如 XxxAbility
     private final Multimap<String, String> providers = HashMultimap.create();
 
     @Override
@@ -71,9 +73,20 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
     }
 
     private boolean processImpl(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
+        System.out.println();
+//        RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
+//        System.out.println(runtimeMXBean.getName());
+//        int processId = Integer.valueOf(runtimeMXBean.getName().split("@")[0]).intValue();
+//        System.out.println("进程ID: " + processId);
+        System.out.println("roundEnv.processingOver(): " + roundEnv.processingOver());
+        System.out.println("annotations: " + annotations);
+
+        // roundEnv.processingOver():如果循环处理完成返回true，否则返回false。
         if (roundEnv.processingOver()) {
+            System.out.println("生成配置文件");
             generateConfigFiles();
         } else {
+            System.out.println("处理注解");
             processAnnotations(annotations, roundEnv);
         }
 
@@ -91,12 +104,14 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
     private void processAnnotations(Set<? extends TypeElement> annotations,
                                     RoundEnvironment roundEnv) {
 
+        // 获取被指定Annotation注解的类
         Set<? extends Element> elements = roundEnv.getElementsAnnotatedWith(getProcessAnnotationClass());
-
+        System.out.println("获取 " + annotations + " 的所有实现，并遍历");
         log(annotations.toString());
         log(elements.toString());
 
         for (Element e : elements) {
+            System.out.println("Element: " + e);
             TypeElement providerImplementer = null;
             if (e instanceof TypeElement) {
                 providerImplementer = (TypeElement) e;
@@ -120,6 +135,7 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
                     continue;
                 }
                 providers.put(serviceClass.getName(), getBinaryName(providerImplementer));
+                System.out.println("Put providers, name: " + serviceClass.getName() + ", BinaryName: " + getBinaryName(providerImplementer));
             }
         }
     }
@@ -127,8 +143,13 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
     private void generateConfigFiles() {
         Filer filer = processingEnv.getFiler();
 
+        providers.forEach((k, v) -> {
+            System.out.println("生成配置文件前: k=" + k + ", v" + v);
+        });
         for (String providerInterface : providers.keySet()) {
+            System.out.println("将providers生成文件，providerInterface：" + providerInterface);
             String resourceFile = "META-INF/services/" + providerInterface;
+            System.out.println("resourceFile: " + resourceFile);
             log("Working on resource file: " + resourceFile);
             try {
                 SortedSet<String> allServices = Sets.newTreeSet();
@@ -140,8 +161,11 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
                     FileObject existingFile = filer.getResource(StandardLocation.CLASS_OUTPUT, "",
                             resourceFile);
                     log("Looking for existing resource file at " + existingFile.toUri());
+                    System.out.println("在指定路径寻找存在的资源文件: " + existingFile.toUri());
                     Set<String> oldServices = ServicesFileUtils.readServiceFile(existingFile.openInputStream());
                     log("Existing service entries: " + oldServices);
+                    System.out.println("资源文件已存在, 存在的service: " + oldServices);
+                    // 比如在resource目录下已经存在了当前的SPI文件，则读取文件内容做合并
                     allServices.addAll(oldServices);
                 } catch (IOException e) {
                     // According to the javadoc, Filer.getResource throws an exception
@@ -150,22 +174,27 @@ public abstract class LatticeAnnotationProcessor extends AbstractProcessor {
                     // FileObject that refers to a non-existent file but will throw
                     // IOException if you try to open an input stream for it.
                     log("Resource file did not already exist.");
+                    System.out.println("资源文件不存在");
                 }
 
                 Set<String> newServices = new HashSet<String>(providers.get(providerInterface));
                 if (allServices.containsAll(newServices)) {
                     log("No new service entries being added.");
+                    System.out.println("没有新的service添加");
                     return;
                 }
 
+                System.out.println("新的service添加之前: " + allServices);
                 allServices.addAll(newServices);
                 log("New service file contents: " + allServices);
+                System.out.println("有新的service添加: " + allServices);
                 FileObject fileObject = filer.createResource(StandardLocation.CLASS_OUTPUT, "",
                         resourceFile);
                 OutputStream out = fileObject.openOutputStream();
                 ServicesFileUtils.writeServiceFile(allServices, out);
                 out.close();
                 log("Wrote to: " + fileObject.toUri());
+                System.out.println("将新的service写入文件");
             } catch (IOException e) {
                 fatalError("Unable to createPluginConfig " + resourceFile + ", " + e);
                 return;
