@@ -44,22 +44,26 @@ public class LatticeBeanUtils {
         }
         //尝试从Spring注册的Bean中获取
         try {
+            // 当前类是否加了spring注解
             SpringAnnotationResult result = getSpringAnnotationResult(beanClass);
             if (result.isHasAnnotation()) {
                 T t = StringUtils.isEmpty(result.getValue())
-                        ? SpringApplicationContextHolder.getSpringBean(beanClass)
-                        : SpringApplicationContextHolder.getSpringBean(result.getValue());
+                        ? SpringApplicationContextHolder.getSpringBean(beanClass)   // 通过class获取
+                        : SpringApplicationContextHolder.getSpringBean(result.getValue());  // 通过bean name获取
                 if (null != t) {
                     return t;
                 }
             }
+            // 通过className获取，没有就报错
             T t = SpringApplicationContextHolder
                     .getSpringBean(StringUtils.uncapitalize(beanClass.getSimpleName()));
             if (null != t) {
                 return t;
             }
+            // 创建spring bean
             return createSpringBeanInstance(beanClass, values);
         } catch (Throwable th) {
+            // 报错兜底
             return createSpringBeanInstance(beanClass, values);
         }
     }
@@ -69,10 +73,13 @@ public class LatticeBeanUtils {
         try {
             ApplicationContext context = SpringApplicationContextHolder.getContext();
             if (context != null) {
+                // spring 容器创建 bean
                 return (T) context.getAutowireCapableBeanFactory().createBean(beanClass);
             }
+            // java 反射创建实例
             return (T) beanClass.newInstance();
         } catch (Throwable e) {
+            // 基于参数个数协商构造函数创建实例
             return createBeanInstance(beanClass, values);
         }
     }

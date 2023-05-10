@@ -24,6 +24,7 @@ public abstract class ClassLoaderUtil {
             classSet.addAll(handler.getPackageAllClasses(classPackage, true));
         }
 
+        // 过滤出lattice的模型类
         return classSet.stream().filter(ClassLoaderUtil::isLatticeModelClass).collect(Collectors.toSet());
     }
 

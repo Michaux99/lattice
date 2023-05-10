@@ -30,6 +30,7 @@ public class LatticeAnnotationUtils extends AnnotationUtils {
 
     public static ExtensionAnnotation getExtensionAnnotation(Method method) {
         for (ExtensionAnnotationParser parser : LatticeAnnotationSpiFactory.getInstance().getExtensionAnnotationParsers()) {
+            // @Extension 注解是可以被继承的
             Annotation annotation = LatticeAnnotationUtils.findAnnotation(method, parser.getAnnotationClass());
             if (null == annotation) {
                 continue;

@@ -54,7 +54,7 @@ public class BusinessExtUtils {
         supportedCodes.addAll(distinctSupportCodes(businessExt));
         try {
             for (Method method : businessExt.getClass().getMethods()) {
-                ExtensionAnnotation annotation = LatticeAnnotationUtils.getExtensionAnnotation(method);
+                ExtensionAnnotation annotation = LatticeAnnotationUtils.getExtensionAnnotation(method); // 会一直往上查询
                 if (null == annotation) {
                     continue;
                 }

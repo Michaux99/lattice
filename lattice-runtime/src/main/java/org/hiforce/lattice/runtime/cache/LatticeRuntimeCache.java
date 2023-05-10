@@ -62,8 +62,11 @@ public class LatticeRuntimeCache implements ILatticeRuntimeCache, LatticeCache {
     @Override
     public synchronized void init() {
         getAbilityCache().init();
+        //
         getExtensionCache().init();
+        //
         getTemplateIndex().init();
+        //
         getInvokeCache().init();
         getBusinessConfigCache().init();
         getBusinessExtCache().init();

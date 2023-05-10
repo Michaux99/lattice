@@ -12,6 +12,7 @@ import java.lang.annotation.*;
 public @interface Realization {
 
     /**
+     * 哪些业务码走这个扩展实现
      * @return The bizCode realization supported.
      */
     String[] codes();

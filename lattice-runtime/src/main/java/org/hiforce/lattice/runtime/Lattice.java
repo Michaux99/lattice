@@ -97,12 +97,19 @@ public class Lattice {
 
     public final void start() {
         initLatticeClassLoader();
+        // 注册能力实例
         registerAbilities();//Register the Ability Instances during runtime.
+        // 注册能力实现（扩展点）
         registerRealizations();//Register the business extension realization during runtime.
+        // 注册业务
         registerBusinesses();
+        // 注册用例
         registerUseCases();
+        // 注册产品
         registerProducts();
+        // 构建业务配置
         buildBusinessConfig();
+        // 初始化缓存，包括运行时（extension缓存构造）
         initLatticeCache();
         initialized = true;
     }
@@ -467,6 +474,7 @@ public class Lattice {
         Set<Class> classesSet = Sets.newHashSet(abilityClasses);
         Set<String> packageSet = abilityClasses.stream().map(p -> p.getPackage().getName()).collect(Collectors.toSet());
         for (String pkg : packageSet) {
+            // 扫描合并已加载类所在包下的Ability的实现
             classesSet.addAll(ClassLoaderUtil.scanLatticeClasses(pkg));
         }
         return classesSet;

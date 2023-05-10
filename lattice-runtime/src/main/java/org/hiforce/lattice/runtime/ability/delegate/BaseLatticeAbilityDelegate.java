@@ -118,6 +118,7 @@ public class BaseLatticeAbilityDelegate {
 
         List<RunnerItemEntry<R>> cachedRunners = null;
         LatticeRuntimeCache runtimeCache = Lattice.getInstance().getRuntimeCache();
+        //
         ExtensionSpec extensionSpec = runtimeCache.getExtensionCache().getExtensionIndex().getKey1Only(extCode);
         if (null == extensionSpec) {
             throw new LatticeRuntimeException("LATTICE-CORE-RT-0006", extCode);
@@ -131,6 +132,7 @@ public class BaseLatticeAbilityDelegate {
             throw new LatticeRuntimeException("LATTICE-CORE-RT-0012", bizCode);
         }
 
+        // 从缓存中获取扩展点的执行器。可能会返回多个
         cachedRunners = getCachedExtensionRunners(extensionSpec, businessConfig, filter);
         if (cachedRunners == null) {
             return buildDefaultRunnerCollection(extCode, onlyProduct);
@@ -245,6 +247,7 @@ public class BaseLatticeAbilityDelegate {
             BizSessionContext bizSessionContext =
                     InvokeCache.instance().get(BizSessionContext.class, BizSessionContext.class);
             if (null == bizSessionContext) {
+                // 构建扩展点执行项
                 RunnerItemEntry<R> runnerItemEntry =
                         buildExtensionRunnerItemEntry(extension, config, bizCode, scenario);
                 if (null != runnerItemEntry) {
@@ -287,6 +290,7 @@ public class BaseLatticeAbilityDelegate {
 
         ExtensionRunner extensionJavaRunner = null;
 
+        //
         IBusinessExt extImpl = loadExtensionRealization(bizCode, scenario, template, extension.getCode());
         if (null == extImpl) {
             if (log.isInfoEnabled()) {
@@ -320,9 +324,11 @@ public class BaseLatticeAbilityDelegate {
 
         if (supportCustomization) {
             if (extension.getProtocolType() == ProtocolType.REMOTE) {
+                // 构建远程扩展点执行器
                 runner = buildRemoteExtensionRunner(template, extension, bizCode, scenario);
             }
             if (null == runner || extension.getProtocolType() == ProtocolType.LOCAL) {
+                // 构建本地扩展点执行器
                 runner = buildLocalExtensionRunner(template, extension, bizCode, scenario);
             }
         } else {
@@ -432,6 +438,7 @@ public class BaseLatticeAbilityDelegate {
 
         IBusinessExt extFacade = null;
 
+        //
         extFacade = findIExtensionPointsFacadeViaScenario(scenario, template, extPointCode);
         if (extFacade != null) {
             extImpl = extFacade.getBusinessExtByCode(extPointCode, scenario);
@@ -451,6 +458,7 @@ public class BaseLatticeAbilityDelegate {
     public IBusinessExt findIExtensionPointsFacadeViaScenario(String scenario, TemplateSpec template, String extPointCode) {
         IBusinessExt extFacade = null;
 
+        // 获取
         ITemplateCache templateCache = Lattice.getInstance().getRuntimeCache().getTemplateIndex();
 
         List<RealizationSpec> realizationSpecs = Lattice.getInstance().getAllRegisteredRealizations();
@@ -460,9 +468,13 @@ public class BaseLatticeAbilityDelegate {
                 if (StringUtils.isNotEmpty(realization.getScenario())) {
                     continue;
                 }
+                // 获取到扩展实现的实例
                 IBusinessExt facade = realization.getBusinessExt();
+                // 匹配
                 if (facade != null
+                        // 扩展实现的code（比如 business.a）跟模板code比较（模板可以是业务、产品、）
                         && isCodeMatched(realization.getCode(), template.getCode())
+                        // 扩展点实例中包含这个扩展点（一个实例中可以有多个扩展点）
                         && null != facade.getBusinessExtByCode(extPointCode, scenario)) {
                     extFacade = facade;
                     break;

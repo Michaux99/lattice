@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * 一个AbilitySpec会有多个ability instance麽？
+ *
  * @author Rocky Yu
  * @since 2022/9/15
  */
@@ -34,7 +36,7 @@ public class AbilitySpec extends BaseSpec {
     @Setter
     private String parentType;
 
-
+    // Ability实现类
     @Getter
     @Setter
     private Class<?> abilityClass;

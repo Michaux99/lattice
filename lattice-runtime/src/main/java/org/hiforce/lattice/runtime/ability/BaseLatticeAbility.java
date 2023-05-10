@@ -135,6 +135,7 @@ public abstract class BaseLatticeAbility<BusinessExt extends IBusinessExt>
         }
 
         try {
+            // 基于一个代理对象的执行来初始化能力上下文
             initAbiliinittyInvokeContext(callback);//init the ability context.
             String extCode = getContext().getExtCode();
             if (StringUtils.isEmpty(extCode)) {
@@ -156,7 +157,7 @@ public abstract class BaseLatticeAbility<BusinessExt extends IBusinessExt>
                                         .map(p -> p.getBizInfo()).orElse(getContext().getBizObject().getBizId().toString()), extCode));
             }
 
-
+            // 通过扩展点编码从扩展点缓存中获取扩展点，进行一些校验动作
             ExtensionSpec extensionSpec = getRuntimeCache().getExtensionCache().getExtensionSpecByCode(extCode);
             if (null == extensionSpec && !Lattice.getInstance().isSimpleMode()) {
                 throw new LatticeRuntimeException("LATTICE-CORE-RT-0016", extCode);
@@ -172,7 +173,9 @@ public abstract class BaseLatticeAbility<BusinessExt extends IBusinessExt>
             }
 
             List<T> results = new ArrayList<>(16);
+            // 通过当前能力实例的一个包装对象，
             RunnerCollection<R> runnerCollection = delegate.loadExtensionRunners(extCode, filter);
+            // 执行
             return runnerCollection.distinct()
                     .reduceExecute(extCode, reducer, (ExtensionCallback<IBusinessExt, T>) callback, results);
         } finally {
@@ -182,11 +185,15 @@ public abstract class BaseLatticeAbility<BusinessExt extends IBusinessExt>
 
     @SuppressWarnings("all")
     private <T> void initAbiliinittyInvokeContext(ExtensionCallback<BusinessExt, T> callback) {
+        // 获取默认扩展点实现
         BusinessExt businessExt = this.getDefaultRealization();
         List<Object> extParams = Lists.newArrayList();
+        // 创建一个代理对象。
+        // 目的是通过一次方法调用，往Ability执行上下文中放入一些参数
         Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(businessExt.getClass());
         enhancer.setCallback((MethodInterceptor) (o, method, params, methodProxy) -> {
+            // 往上下文中设置参数
             this.getContext().setExtMethod(method);
             if (null != params) {
                 for (Object p : params) {
@@ -194,6 +201,7 @@ public abstract class BaseLatticeAbility<BusinessExt extends IBusinessExt>
                 }
             }
             this.getContext().setInvokeParams(extParams);
+            // 获取扩展点注解
             ExtensionAnnotation annotation =
                     LatticeAnnotationUtils.getExtensionAnnotation(method);
             if (null == annotation) {
@@ -207,6 +215,7 @@ public abstract class BaseLatticeAbility<BusinessExt extends IBusinessExt>
             return null;
         });
         businessExt = (BusinessExt) enhancer.create();
+        // 扩展点回调方法执行，传入代理对象，初始化上下文参数
         callback.apply(businessExt);
     }
 }

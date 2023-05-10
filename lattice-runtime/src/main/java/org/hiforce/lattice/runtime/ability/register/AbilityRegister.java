@@ -50,6 +50,7 @@ public class AbilityRegister {
     public List<AbilitySpec> register(AbilityBuildRequest regDTO) {
 
         List<AbilitySpec> abilitySpecList = new ArrayList<>();
+        // 遍历所有Ability实现类
         for (Class<?> currentClass : regDTO.getClassSet()) {
             Pair<AbilityAnnotation, Class<?>> pair = findAbilityAnnotationAndAbilityClass(currentClass);
             if (null == pair) {
@@ -65,8 +66,11 @@ public class AbilityRegister {
                     continue;
                 }
             }
+            // 缓存Ability
             AbilitySpec abilitySpec = AbilityCache.getInstance().doCacheAbilitySpec(ability, targetClass);
             abilitySpecList.add(abilitySpec);
+            // 往能力中添加Ability实例（扩展点实现）
+            // 这里是将所有ability spi实现的实例设置到每一个ability缓存？
             abilitySpec.addAbilityInstance(scanAbilityInstance(abilitySpec, regDTO.getClassSet()));
 
         }
@@ -88,9 +92,10 @@ public class AbilityRegister {
         return null;
     }
 
+    // 扫描能力实例
     @SuppressWarnings("all")
     public synchronized List<AbilityInstSpec> scanAbilityInstance(AbilitySpec abilitySpec, Collection<Class> classSet) {
-
+        // 注册能力实例
         List<AbilityInstSpec> abilityInstanceSpecList = new ArrayList<>(registerAbilityInstances(abilitySpec, classSet));
         abilityInstanceSpecList.sort(Comparator.comparingInt(AbilityInstSpec::getPriority));
         return abilityInstanceSpecList;
@@ -98,15 +103,21 @@ public class AbilityRegister {
 
     @SuppressWarnings("all")
     private List<AbilityInstSpec> registerAbilityInstances(AbilitySpec abilitySpec, Collection<Class> classSet) {
+        // fixme 这里为什么要传入所有的ability spi实现？
+        // fixme 这里为什么要使用列表？
         List<AbilityInstSpec> instanceSpecs = new ArrayList<>();
+        // 遍历所有ability spi实现
         for (Class<?> targetClass : classSet) {
+            // 不能是抽象类 或 接口
             if (Modifier.isAbstract(targetClass.getModifiers())
                     || Modifier.isInterface(targetClass.getModifiers())) {
                 continue;
             }
+            // 必须是当前abilitySpec的子类
             if (!LatticeClassUtils.isSubClassOf(targetClass, abilitySpec.getAbilityClass())) {
                 continue;
             }
+            // 注册Ability实例
             AbilityInstBuildResult result = innerRegisterAbilityInstance(abilitySpec, targetClass);
             if (!result.isSuccess() && !result.isRegistered()) {
                 Message message = null == result.getMessage() ? Message.code("LATTICE-CORE-RT-0001", targetClass.getName(), "not clear")
@@ -124,6 +135,7 @@ public class AbilityRegister {
     private AbilityInstBuildResult innerRegisterAbilityInstance(AbilitySpec abilitySpec, Class<?> instanceClass) {
         IAbility<?> ability;
         IAbility<?> originAbility;
+        // 通过Ability实现类，获取/创建 Class 的实例对象
         Object beanViaClass = getAndCreateSpringBeanViaClass(instanceClass, (Object) null);
         if (beanViaClass instanceof IAbility) {
             ability = (IAbility<?>) beanViaClass;
@@ -142,14 +154,17 @@ public class AbilityRegister {
             return AbilityInstBuildResult.failed(Message.code("LATTICE-CORE-RT-0002", instanceClass.getName()));
         }
 
+        // 判断Ability 实例是否已注册
         if (isAbilityInstanceRegistered(abilitySpec, originAbility)) {
             return AbilityInstBuildResult.registered();
         }
 
+        // 构建Ability实例（包含扩展点）
         AbilityInstBuildResult result = buildAbilityInstanceSpec(abilitySpec, originAbility, instanceClass);
         if (result.isSuccess()) {
             AbilityInstSpec abilityInstanceSpec = result.getInstanceSpec();
             if (null != abilityInstanceSpec) {
+                // 缓存Ability实例的扩展点
                 Lattice.getInstance().getRuntimeCache()
                         .getExtensionCache()
                         .doCacheExtensionSpec(abilityInstanceSpec.getExtensions());
@@ -171,6 +186,7 @@ public class AbilityRegister {
             instanceDesc.setInstanceClass(instanceClass.getName());
             instanceDesc.setCode(instance.getInstanceCode());
             instanceDesc.setName(instanceClass.getSimpleName());
+            // 生成Ability扩展点
             instanceDesc.getExtensions().addAll(scanAbilityExtensions(instance, abilitySpec));
 
             PriorityAnnotation annotation = getPriorityAnnotationInfo(instanceClass);
@@ -178,6 +194,7 @@ public class AbilityRegister {
                 instanceDesc.setPriority(annotation.getValue());
             }
 
+            // 添加单个实例
             abilitySpec.addAbilityInstance(instanceDesc);
             return AbilityInstBuildResult.success(instanceDesc);
         } catch (LatticeRuntimeException ex) {
@@ -189,6 +206,7 @@ public class AbilityRegister {
 
     private Set<ExtensionSpec> scanAbilityExtensions(IAbility<?> ability, AbilitySpec abilitySpec) {
         try {
+            // 默认扩展实现
             Class<?> returnType = ability.getDefaultRealization().getClass();
             if (returnType.isAnonymousClass() || returnType.isInterface()) {
                 throw new LatticeRuntimeException("LATTICE-CORE-RT-0022", returnType.getName());
@@ -206,12 +224,15 @@ public class AbilityRegister {
 
     private Set<ExtensionSpec> scanAbilityExtensions(Class<?> itfClass, AbilitySpec abilitySpec) {
         Set<ExtensionSpec> extensionSpecList = new HashSet<>();
+        // 默认扩展实现Class的所有方法
         Method[] methods = itfClass.getMethods();
         for (Method method : methods) {
+            // @Extension注解是可以被继承的
             ExtensionAnnotation annotation = getExtensionAnnotation(method);
             if (null == annotation) {
                 continue;
             }
+            // 构建扩展点
             ExtensionSpec extensionSpec = buildExtensionPointSpec(annotation, abilitySpec, itfClass, method);
             if (null != extensionSpec) {
                 extensionSpecList.add(extensionSpec);

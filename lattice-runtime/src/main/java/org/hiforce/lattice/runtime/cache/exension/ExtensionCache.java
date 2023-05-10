@@ -47,6 +47,7 @@ public class ExtensionCache implements LatticeCache {
 
     @Override
     public void init() {
+        // 将所有已注册能力的能力实例中的扩展点拿出来
         List<ExtensionSpec> extensions = Lattice.getInstance().getAllRegisteredAbilities().stream()
                 .flatMap(p -> p.getAbilityInstances().stream())
                 .flatMap(p -> p.getExtensions().stream()).collect(Collectors.toList());

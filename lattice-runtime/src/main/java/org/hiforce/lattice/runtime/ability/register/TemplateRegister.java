@@ -28,6 +28,7 @@ import static org.hiforce.lattice.utils.LatticeAnnotationUtils.*;
  * @author Rocky Yu
  * @since 2022/9/18
  */
+// Spec的业务语义是啥？
 public class TemplateRegister {
 
     private static TemplateRegister instance;
