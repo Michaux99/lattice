@@ -97,17 +97,7 @@ public class Message implements Serializable {
     public static Message code(@PropertyKey(resourceBundle = MessageCode.BUNDLE) String key,
                                Object... params) {
 
-        if (params != null && params.length > 0) {
-            return MessageCode.toErrorMessage(key, params);
-        } else {  //没有参数的才可以cache
-            Message message = cachedMessages.get(key);
-            if (message == null) {
-                message = MessageCode.toErrorMessage(key, params);
-                cachedMessages.put(key, message);
-            }
-            return Message.of(message.getCode(), message.getText(), message.getDisplayText(),
-                message.getReadableCode());
-        }
+        return MessageCode.toErrorMessage(key, params);
     }
 
     /**
@@ -158,13 +148,13 @@ public class Message implements Serializable {
     @Override
     public String toString() {
         String message = "ErrorMessage{" +
-            "c='" + code + '\'' +
-            ", rC='" + readableCode + '\'' +
-            ", m='" + text + '\'';
+                "c='" + code + '\'' +
+                ", rC='" + readableCode + '\'' +
+                ", m='" + text + '\'';
         String content = contentToString();
         if (StringUtils.isNotBlank(content)) {
             message = message +
-                " ct=' " + content + '\'';
+                    " ct=' " + content + '\'';
         }
 
         return message + "}";
@@ -174,13 +164,13 @@ public class Message implements Serializable {
 
     public String getFullText() {
         return "Message{" +
-            "code='" + code + '\'' +
-            ", text='" + text + '\'' +
-            ", displayText='" + displayText + '\'' +
-            ", readableCode='" + readableCode + '\'' +
-            ", group='" + group + '\'' +
-            ", contents=" + contents +
-            '}';
+                "code='" + code + '\'' +
+                ", text='" + text + '\'' +
+                ", displayText='" + displayText + '\'' +
+                ", readableCode='" + readableCode + '\'' +
+                ", group='" + group + '\'' +
+                ", contents=" + contents +
+                '}';
     }
 
     public String contentToString() {

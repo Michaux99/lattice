@@ -16,13 +16,13 @@
     <url>https://github.com/hiforce/lattice</url>
     <inceptionYear>2022</inceptionYear>
 
-    <version>1.0.18</version>
+    <version>1.0.18.5</version>
     <properties>
-        <version.lattice>1.0.18</version.lattice>
+        <version.lattice>1.0.18.5</version.lattice>
         <version.spring>5.3.27</version.spring>
         <version.spring.boot>2.7.4</version.spring.boot>
         <springext-plugin-version>1.2</springext-plugin-version>
-        <dubbo.version>3.1.5</dubbo.version>
+        <dubbo.version>3.1.11</dubbo.version>
         <version.jackson>2.14.0-rc1</version.jackson>
         <version.jdk>1.8</version.jdk>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -97,7 +97,7 @@
             <dependency>
                 <groupId>com.google.guava</groupId>
                 <artifactId>guava</artifactId>
-                <version>31.1-jre</version>
+                <version>33.0.0-jre</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -301,16 +301,11 @@
                     <version>1.6</version>
                     <executions>
                         <execution>
+                            <id>sign-artifacts</id>
                             <phase>verify</phase>
                             <goals>
                                 <goal>sign</goal>
                             </goals>
-                            <configuration>
-                                <gpgArguments>
-                                    <arg>--pinentry-mode</arg>
-                                    <arg>loopback</arg>
-                                </gpgArguments>
-                            </configuration>
                         </execution>
                     </executions>
                 </plugin>

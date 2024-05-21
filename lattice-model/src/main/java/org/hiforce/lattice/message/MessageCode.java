@@ -12,6 +12,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,6 +43,7 @@ public class MessageCode {
 
     private static final Map<String, String> cachedLogMessage = new ConcurrentHashMap<>();
 
+    private static final ThreadLocal<String> dynamicI18n = new ThreadLocal<>();
 
     static {
         init();
@@ -99,19 +101,50 @@ public class MessageCode {
         return result;
     }
 
+    @SuppressWarnings("all")
+    public static String displayMessage(Locale locale, @PropertyKey(resourceBundle = BUNDLE) String key, Object... params) {
+        Map<Object, Object> props = new HashMap<>();
+
+        String i18nCode = null == locale ? Locale.CHINA.toString() : locale.toString();
+        if (allDisplayErrorCodes.containsKey(i18nCode)) {
+            props = (Map<Object, Object>) allDisplayErrorCodes.get(i18nCode);
+        } else {
+            props = extractContextErrorCodes("i18n/infos_" + i18nCode + ".properties", false, DEFAULT_DISPLAY_ERROR_MESSAGE);
+            allDisplayErrorCodes.put(i18nCode, props);
+        }
+        String value = searchKeyInAllResourceFile(props, key, params);
+        if (StringUtils.isEmpty(value)) {
+            value = displayMessage(Locale.ENGLISH, key, params);
+        }
+        return displayMessage(key, params);
+    }
+
+    @SuppressWarnings("unchecked")
     public static String displayMessage(@PropertyKey(resourceBundle = BUNDLE) String key, Object... params) {
-        return searchKeyInAllResourceFile(displayErrorCodes, key, DEFAULT_DISPLAY_ERROR_MESSAGE, params);
+        Map<Object, Object> props = new HashMap<>();
+        String i18nCode = dynamicI18n.get();
+        if (StringUtils.isEmpty(i18nCode)) {
+            props = displayErrorCodes;
+        } else {
+            if (allDisplayErrorCodes.containsKey(i18nCode)) {
+                props = (Map<Object, Object>) allDisplayErrorCodes.get(i18nCode);
+            } else {
+                props = extractContextErrorCodes("i18n/infos_" + i18nCode + ".properties", false, DEFAULT_DISPLAY_ERROR_MESSAGE);
+                allDisplayErrorCodes.put(i18nCode, props);
+            }
+        }
+        return searchKeyInAllResourceFile(props, key, DEFAULT_DISPLAY_ERROR_MESSAGE, params);
     }
 
 
     private static String searchKeyInAllResourceFile(Map<Object, Object> props,
                                                      String key,
-                                                     String defaultValue, Object... params) {
-        if (!props.containsKey(key)) return defaultValue;
+                                                     Object... params) {
+        if (!props.containsKey(key)) return null;
 
         Object obj = props.get(key);
         String message = buildMessage(obj, params);
-        return StringUtils.isNotBlank(message) ? message : defaultValue;
+        return StringUtils.isNotBlank(message) ? message : null;
     }
 
 
@@ -153,7 +186,7 @@ public class MessageCode {
                 URL url = resources.nextElement();
                 InputStream in = url.openStream();
                 Properties prop = new Properties();
-                prop.load(new InputStreamReader(in, "UTF-8"));
+                prop.load(new InputStreamReader(in, StandardCharsets.UTF_8));
                 if (replaceEnglishWords) {
                     for (Map.Entry<Object, Object> entry : prop.entrySet()) {
                         //如果全是英文,则替换为默认文案
@@ -171,7 +204,7 @@ public class MessageCode {
         return props;
     }
 
-    public static final boolean hasChineseCharacter(String chineseStr) {
+    public static boolean hasChineseCharacter(String chineseStr) {
         char[] charArray = chineseStr.toCharArray();
         for (int i = 0; i < charArray.length; i++) {
             if ((charArray[i] >= 0x4e00) && (charArray[i] <= 0x9fbb)) {
@@ -204,5 +237,9 @@ public class MessageCode {
             displayErrorCodes = extractContextErrorCodes("i18n/infos_" + i18nCode + ".properties", false, DEFAULT_DISPLAY_ERROR_MESSAGE);
             allDisplayErrorCodes.put(i18nCode, displayErrorCodes);
         }
+    }
+
+    public static void setDynamicI18n(String i18nCode) {
+        dynamicI18n.set(i18nCode);
     }
 }
