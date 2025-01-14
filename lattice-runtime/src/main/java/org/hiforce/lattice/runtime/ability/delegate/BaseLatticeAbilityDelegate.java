@@ -169,7 +169,7 @@ public class BaseLatticeAbilityDelegate {
             }
             List<TemplateSpec<? extends ITemplate>> effective = (null == bizSessionContext) ? Lists.newArrayList()
                     : bizSessionContext.getEffectiveTemplates()
-                    .get(ability.getContext().getBizCode());
+                    .get(ability.getBizObject().getBizContext().toString());
 
             if (effective.stream().noneMatch(p -> StringUtils.equals(p.getCode(), runner.getTemplate().getCode()))) {
                 continue;
@@ -188,9 +188,9 @@ public class BaseLatticeAbilityDelegate {
         return runnerCollectionBuilder.buildCustomRunnerCollection(ability, extensionCode);
     }
 
-    private static boolean isTemplateEffected(String bizCode, TemplateSpec template) {
+    private static boolean isTemplateEffected(IBizObject bizObject, TemplateSpec template) {
         if (template.getType() == TemplateType.BUSINESS) {
-            return BizCodeUtils.isCodesMatched(bizCode, template.getCode());
+            return BizCodeUtils.isCodesMatched(bizObject.getBizCode(), template.getCode());
         }
 
         BizSessionContext bizSessionContext =
@@ -199,7 +199,7 @@ public class BaseLatticeAbilityDelegate {
             return false;
         }
 
-        List<TemplateSpec<? extends ITemplate>> effective = bizSessionContext.getEffectiveTemplates().get(bizCode);
+        List<TemplateSpec<? extends ITemplate>> effective = bizSessionContext.getEffectiveTemplates().get(bizObject.getBizContext().toString());
         if (effective.stream().noneMatch(p -> StringUtils.equals(p.getCode(), template.getCode()))) {
             return false;
         }
@@ -224,8 +224,8 @@ public class BaseLatticeAbilityDelegate {
             if (result == NULL_OBJECT) {
                 return null;
             } else {
-                List<RunnerItemEntry<R>>  runnerItemEntryList = (List<RunnerItemEntry<R>>) result;
-                runnerItemEntryList.forEach(r->{
+                List<RunnerItemEntry<R>> runnerItemEntryList = (List<RunnerItemEntry<R>>) result;
+                runnerItemEntryList.forEach(r -> {
                     r.setAbility(ability);
                     r.getRunner().setAbility(ability);
                 });
@@ -534,7 +534,7 @@ public class BaseLatticeAbilityDelegate {
                 }
             }
             IBizObject bizInstance = this.bizObject;
-            return isTemplateEffected(bizInstance.getBizCode(), entry.getTemplate());
+            return isTemplateEffected(bizInstance, entry.getTemplate());
         }
     }
 
@@ -545,7 +545,7 @@ public class BaseLatticeAbilityDelegate {
 
         @Override
         public boolean test(RunnerItemEntry<R> entry) {
-            return isTemplateEffected(bizObject.getBizCode(), entry.getTemplate());
+            return isTemplateEffected(bizObject, entry.getTemplate());
         }
     }
 }
