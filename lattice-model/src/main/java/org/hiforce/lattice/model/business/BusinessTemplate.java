@@ -20,6 +20,6 @@ public abstract class BusinessTemplate extends Template implements IBusiness {
     }
 
     public boolean isEffect(ScenarioRequest request) {
-        return false;
+        return true;
     }
 }
